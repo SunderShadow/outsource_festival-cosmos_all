@@ -1,0 +1,51 @@
+services:
+    client:
+        build: ./client
+        restart: always
+        ports:
+            - "3000:3000"
+        networks:
+            - server
+        depends_on:
+            - server
+    server:
+        # Franken PHP https://frankenphp.dev/docs
+        build: ./server
+        entrypoint: php artisan octane:frankenphp --workers=1 --max-requests=1
+        restart: always
+        ports:
+            - "8000:8000"
+        volumes:
+            - ./server:/app # All application
+            - ./server/php.ini:/usr/local/etc/php/php.ini
+            - caddy_config:/config
+            - caddy_config:/config
+        networks:
+            - server
+        depends_on:
+            - mariadb
+        tty: true # Human readable logs
+    mariadb:
+        image: 'mariadb:11'
+        restart: always
+        ports:
+            - '${FORWARD_DB_PORT:-3306}:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: 'cosmos'
+            MYSQL_ROOT_HOST: '%'
+            MYSQL_DATABASE: 'server'
+            MYSQL_USER: 'prosto'
+            MYSQL_PASSWORD: 'cosmos'
+            MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+        volumes:
+            - 'mariadb:/var/lib/mysql'
+        networks:
+            - server
+networks:
+    server:
+        driver: bridge
+volumes:
+    mariadb:
+        driver: local
+    caddy_data:
+    caddy_config:
